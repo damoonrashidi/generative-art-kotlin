@@ -123,11 +123,11 @@ enum class Logging {
 /*  What type of logging should this project use? */
 val applicationLogging = Logging.FULL
 
-val kotlinVersion = "1.5.0"
+val kotlinVersion = "1.6.10"
 
 plugins {
     java
-    kotlin("jvm") version ("1.5.0")
+    kotlin("jvm") version ("1.6.10")
     id("com.github.johnrengelman.shadow") version ("6.1.0")
     id("org.beryx.runtime") version ("1.11.4")
 }
