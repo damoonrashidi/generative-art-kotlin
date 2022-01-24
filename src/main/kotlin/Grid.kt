@@ -25,7 +25,8 @@ fun main() = application {
         extend(NoClear())
         extend {
 
-            Random.randomizeSeed()
+            Random.resetState()
+            Random.seed = System.currentTimeMillis().toString()
 
             val renderWidth = 4500
             val renderHeight = (4500 * 1.5).toInt()
@@ -45,13 +46,12 @@ fun main() = application {
 
                     val blockWidth = run {
 
-                        val isWide = Random.double(0.0, 1.0) > 0.5
+                        val isWide = Random.double(0.0, 1.0) > 0.95
 
-                        if (isWide) {
-                            Random.double(renderWidth * 0.009, renderWidth * 0.08)
-                        } else {
-                            Random.double(renderWidth * 0.003, renderWidth * 0.04)
-                        }
+                        if (isWide) Random.double(
+                            renderWidth * 0.05,
+                            renderWidth * 0.12
+                        ) else Random.double(renderWidth * 0.003, renderWidth * 0.04)
 
                     }
                     var rowCursor = padding
@@ -86,8 +86,7 @@ fun main() = application {
             println("Writing ${renderWidth}x${renderHeight}px @ $filename")
 
             canvas.colorBuffer(0)
-                .saveToFile(File("/Users/damoonrashidi/Desktop/$filename"), async = false)
-            Runtime.getRuntime().exec("open /Users/damoonrashidi/Desktop/$filename")
+                .saveToFile(File("./outputs/grid/$filename"), async = false)
             exitProcess(0)
         }
 

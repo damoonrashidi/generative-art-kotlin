@@ -41,7 +41,7 @@ val orxFeatures = setOf(
 //  "orx-obj-loader",
     "orx-olive",
 //  "orx-osc",
-//  "orx-palette",
+    "orx-palette",
     "orx-panel",
 //  "orx-parameters",
 //  "orx-poisson-fill",
