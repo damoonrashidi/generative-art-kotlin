@@ -4,7 +4,8 @@ import org.openrndr.draw.isolatedWithTarget
 import org.openrndr.draw.renderTarget
 import org.openrndr.extra.noise.Random
 import org.openrndr.math.Vector2
-import org.openrndr.shape.*
+import org.openrndr.shape.Circle
+import org.openrndr.shape.Rectangle
 import java.io.File
 import kotlin.math.abs
 import kotlin.system.exitProcess
@@ -79,10 +80,10 @@ fun main() = application {
 }
 
 fun pointAlong(p1: Vector2, p2: Vector2, percentage: Double = 0.5): Vector2 {
-    return Vector2(p1.x + (p2.x - p1.x) * percentage, p1.y + (p2.y - p1.y) * percentage);
+    return Vector2(p1.x + (p2.x - p1.x) * percentage, p1.y + (p2.y - p1.y) * percentage)
 }
 
-fun getNeighbors(quadMap: List<List<List<Vector2>>>, point: Vector2): List<Vector2> {
+fun getNeighbors(quadMap: QuadMap, point: Vector2): List<Vector2> {
     val xI = (point.x / RENDER_WIDTH * GRID_SIZE).toInt() - 1
     val yI = (point.y / RENDER_HEIGHT * GRID_SIZE).toInt() - 1
 
@@ -91,7 +92,7 @@ fun getNeighbors(quadMap: List<List<List<Vector2>>>, point: Vector2): List<Vecto
     for (y in yI - 1..yI + 1) {
         for (x in xI - 1..xI + 1) {
             if (y in 0..GRID_SIZE && x in 0..GRID_SIZE) {
-                nodes.addAll(quadMap[y][x])
+                nodes.addAll(quadMap[y][x].map { it.center })
             }
         }
     }
@@ -106,8 +107,8 @@ fun getCloseNeighbors(quadMap: List<List<List<Vector2>>>, point: Vector2): List<
 }
 
 fun weightedRandom(min: Double, max: Double): Double {
-    val a = Random.double(min, max);
-    val b = Random.double(min, max);
+    val a = Random.double(min, max)
+    val b = Random.double(min, max)
 
     return min.coerceAtLeast(abs(b - a))
 }

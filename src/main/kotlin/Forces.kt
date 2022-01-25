@@ -37,7 +37,19 @@ fun main() = application {
             val bounds = Rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
             val previous = mutableListOf<Circle>()
             val zoom = Random.int(900, 4_000)
-            val distort = Random.double(-4.4, 4.4)
+            val distort = Random.double(-5.0, 5.0)
+            val linePadding = 1.0
+            val lineWidths = listOf(25.0, 50.0, 100.0)
+            val allowEdgeOverflow = Random.bool(1.0)
+
+            println("seed: $seed")
+            println("renderWidth: $renderWidth")
+            println("renderHeight: $renderHeight")
+            println("zoom: $zoom")
+            println("distort: $distort")
+            println("allowEdgeOverflow: $allowEdgeOverflow")
+
+
             val colorRegion: List<Pair<Triangle, ColorRGBa>> =
                 generateSequence { Triangle(Random.point(bounds), Random.point(bounds), Random.point(bounds)) }.take(
                     10
@@ -45,54 +57,54 @@ fun main() = application {
                     .map {
                         Pair(
                             it,
-                            Random.pick(
-                                Palette.spring()
-                            ).toRGBa()
+                            Random.pick(Palette.noire()).toRGBa()
                         )
                     }
             val canvas = renderTarget(renderWidth, renderHeight) { colorBuffer() }
             drawer.isolatedWithTarget(canvas) {
                 ortho(canvas)
 
-                drawer.fill = ColorHSLa(65.0, 0.30, 0.90).toRGBa()
+                drawer.fill = ColorHSLa(0.0, 0.0, 0.0).toRGBa()
                 drawer.rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
 
-                repeat((renderWidth * 3.5).toInt()) {
+                repeat((renderHeight * 3.5).toInt()) {
+                    val isLong = Random.bool(0.2)
 
                     val lineRadius = run {
                         val heavy = Random.bool(0.05)
-                        if (heavy) 280.0 else Random.pick(listOf(50.0, 90.0))
+                        if (heavy) Random.pick(lineWidths) * 10.0 else Random.pick(lineWidths)
                     }
                     val stepSize = run {
                         val choppy = Random.bool(0.05)
-                        if (choppy) 2.5 else 1.0
+                        if (choppy) 5.0 else 1.0
                     }
                     var (x, y) = run {
-                        val isLong = Random.bool(0.05)
-                        if (isLong) Random.point(
-                            bounds.copy(
-                                width = width * 1.05,
-                                height = height * 1.05,
-                                corner = Vector2(bounds.corner.x * 0.95, bounds.corner.y * 0.95)
-                            ) - bounds
-                        ) else Random.point(bounds)
+                        if (allowEdgeOverflow && isLong) {
+                            Random.point(
+                                bounds.scale(0.9)
+                            )
+                        } else Random.point(bounds.scale(0.8))
                     }
                     val linePoints = mutableListOf<Circle>()
 
                     drawer.fill = run {
                         val region = colorRegion.find { it.first.contains(Vector2(x, y)) }
-                        region?.second ?: ColorRGBa.BLACK
+                        region?.second ?: Palette.noire().first().toRGBa()
                     }
                     drawer.strokeWeight = lineRadius
                     drawer.stroke = drawer.fill
 
-                    while (Vector2(x, y) in bounds.scale(0.85, 0.9)) {
-                        val n = Random.simplex(x / zoom, y / zoom)
-                        x += cos(n * distort) * lineRadius * stepSize
-                        y += sin(n * distort) * lineRadius * stepSize
+                    val innerBounds = if (allowEdgeOverflow)
+                        bounds.scale(0.9)
+                    else bounds.scale(0.8)
+
+                    while (Vector2(x, y) in innerBounds) {
+                        val n = Random.swirl(Vector2(x / zoom, y / zoom), innerBounds)
+                        x += sin(n * distort) * lineRadius * stepSize
+                        y += cos(n * distort) * lineRadius * stepSize
 
                         if (previous.any {
-                                Vector2(x, y).distanceTo(it.center) < it.radius + lineRadius + 5.0
+                                Vector2(x, y).distanceTo(it.center) < it.radius + lineRadius + linePadding
                             }) {
                             break
                         }
@@ -107,10 +119,6 @@ fun main() = application {
 
                 }
 
-                val filename = "Forces-$seed.jpg"
-
-                println("Writing ${previous.size} circles in $filename")
-
                 canvas.colorBuffer(0)
                     .saveToFile(
                         File(
@@ -119,7 +127,9 @@ fun main() = application {
                         async = false
                     )
 
-                exitProcess(0)
+                println("Wrote to ${GenerativeArt.getFilename("Forces")}")
+
+                exitProcess(status = 0)
             }
 
 
