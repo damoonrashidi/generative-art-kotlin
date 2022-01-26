@@ -1,19 +1,9 @@
 import org.openrndr.color.ColorHSLa
-import org.openrndr.extra.noise.Random
-import org.openrndr.math.Vector2
 import org.openrndr.shape.Circle
 import org.openrndr.shape.Rectangle
-import kotlin.io.path.Path
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.nameWithoutExtension
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.sqrt
-
+import kotlin.io.path.*
 
 class GenerativeArt {
-
     companion object {
         fun getFilename(project: String): String {
             val path = "./outputs/$project"
@@ -24,57 +14,44 @@ class GenerativeArt {
             val last = entries.map { it.nameWithoutExtension.split("-").last().toInt() }.maxOf { it }
             return path + "/${project.replaceFirstChar { it.uppercaseChar() }}-${last + 1}.jpg"
         }
+
+        fun openOutput(filename: String) {
+            Runtime.getRuntime().exec("open $filename")
+        }
     }
 }
 
 typealias QuadMap = List<List<MutableList<Circle>>>
 
-class CollisionDetection(private val particles: List<Circle>, private val mapWidth: Int, private val mapHeight: Int) {
-
-    private val map: QuadMap = List(100) { List(100) { mutableListOf<Circle>() } }
+class CollisionDetection(
+    particles: List<Circle>,
+    private val bounds: Rectangle,
+    private val cellCount: Int = 10
+) {
+    private val map: QuadMap = List(cellCount) { List(cellCount) { mutableListOf<Circle>() } }
 
     private fun getQuadIndex(particle: Circle): Pair<Int, Int> {
-        val x = (particle.center.x / mapWidth * map.size - 1).toInt().coerceIn(0 until map.size - 1)
-        val y = (particle.center.y / mapHeight * map[0].size - 1).toInt().coerceIn(0 until map[0].size)
+        val x = (particle.center.x / bounds.width * cellCount).toInt().coerceIn(map.indices)
+        val y = (particle.center.y / bounds.height * cellCount).toInt().coerceIn(map.indices)
 
         return Pair(x, y)
     }
 
     init {
-        for (particle in particles) {
-            val (x, y) = getQuadIndex(particle)
-            map[y][x].add(particle)
-        }
+        this.addParticles(particles)
     }
 
     fun addParticles(additionalParticles: List<Circle>) {
         for (particle in additionalParticles) {
-            val (x, y) = getQuadIndex(particle)
+            val (x, y) = this.getQuadIndex(particle)
             map[y][x].add(particle)
         }
     }
 
     fun getNeighbors(particle: Circle): List<Circle> {
-        val (x, y) = getQuadIndex(particle)
+        val (x, y) = this.getQuadIndex(particle)
         return map[y][x]
     }
-}
-
-fun Random.swirl(point: Vector2, bounds: Rectangle): Double {
-    val centerX = bounds.width / 2
-    val centerY = bounds.height / 2
-    val distanceX = abs(centerX - point.x)
-    val distanceY = abs(centerY - point.y)
-    return sqrt(distanceX * distanceX + distanceY * distanceY)
-}
-
-fun Random.Noise.toCenter(point: Vector2, bounds: Rectangle): Double {
-    val centerX = bounds.width / 2
-    val centerY = bounds.height / 2
-
-    val angle = atan2(abs(point.x - centerX), abs(point.y - centerY))
-
-    return angle * PI
 }
 
 class Palette {
