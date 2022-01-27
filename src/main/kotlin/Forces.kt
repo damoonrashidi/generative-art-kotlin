@@ -113,8 +113,10 @@ fun main() = application {
                         linePoints.add(Circle(x, y, lineRadius))
                     }
 
-                    quads.addParticles(linePoints)
-                    drawer.lineStrip(linePoints.map { it.center })
+                    if (linePoints.size > 15) {
+                        quads.addParticles(linePoints)
+                        drawer.lineStrip(linePoints.map { it.center })
+                    }
                 }
                 val filename = GenerativeArt.getFilename("Forces")
 
