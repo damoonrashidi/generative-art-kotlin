@@ -29,17 +29,19 @@ fun main() = application {
             val renderWidth = 4000
             val renderHeight = (4000 * 1.4).toInt()
             val bounds = Rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
-            val quads = CollisionDetection(listOf<Circle>(), bounds, 1)
+            val quads = CollisionDetection(listOf<Circle>(), bounds, 10)
 
             val zoom = Random.int(900, 4_000)
             val distort = Random.double(-4.0, 4.0)
-            val linePadding = 1.0
+            val linePadding = 25.0
             val lineWidths = listOf<Double>(50.0, 70.0)
-            val allowEdgeOverflow = Random.bool(0.45)
+            val allowEdgeOverflow = Random.bool(0.25)
             val allowHeavy = Random.bool(0.3)
             val allowChoppy = Random.bool(0.3)
-            val backgroundColor = ColorHSLa(20.0, 0.05, 0.1).toRGBa()
-            val palette = Palette.seaSide()
+            val backgroundColor =
+                if (Random.bool(0.9)) ColorHSLa(30.0, 0.2, 0.9).toRGBa() else ColorHSLa(0.0, 0.0, 0.05).toRGBa()
+            val palette =
+                Random.pick(listOf(Palette.seaSide(), Palette.noire(), Palette.winterMountain(), Palette.spring()))
 
             println("seed: $seed")
             println("renderWidth: $renderWidth")
@@ -67,7 +69,7 @@ fun main() = application {
                 drawer.fill = backgroundColor
                 drawer.rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
 
-                repeat((renderHeight * 10.0).toInt()) {
+                repeat((renderHeight * 20.0).toInt()) {
                     val isLong = Random.bool(0.6)
                     val lineRadius = run {
                         val heavy = Random.bool(0.05)
@@ -105,7 +107,7 @@ fun main() = application {
                         val neighbors = quads.getNeighbors(Circle(x, y, lineRadius))
 
                         if (neighbors.any {
-                                Vector2(x, y).distanceTo(it.center) < it.radius + lineRadius + linePadding
+                                Vector2(x, y).distanceTo(it.center) < it.radius / 2 + lineRadius / 2 + linePadding
                             }) {
                             break
                         }
@@ -113,7 +115,7 @@ fun main() = application {
                         linePoints.add(Circle(x, y, lineRadius))
                     }
 
-                    if (linePoints.size > 15) {
+                    if (linePoints.size > 30.0) {
                         quads.addParticles(linePoints)
                         drawer.lineStrip(linePoints.map { it.center })
                     }
