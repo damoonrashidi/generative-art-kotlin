@@ -5,6 +5,7 @@ import org.openrndr.draw.isolatedWithTarget
 import org.openrndr.draw.renderTarget
 import org.openrndr.extra.noclear.NoClear
 import org.openrndr.extra.noise.Random
+import org.openrndr.math.IntVector2
 import org.openrndr.math.Vector2
 import org.openrndr.shape.*
 import java.io.File
@@ -17,6 +18,7 @@ fun main() = application {
         width = 64
         height = 64
         hideWindowDecorations = true
+        position = IntVector2(0, 0)
     }
 
     program {
@@ -33,15 +35,13 @@ fun main() = application {
 
             val zoom = Random.int(900, 4_000)
             val distort = Random.double(-4.0, 4.0)
-            val linePadding = 25.0
-            val lineWidths = listOf<Double>(50.0, 70.0)
+            val linePadding = 5.0
+            val lineWidths = listOf<Double>(1.0, 2.0, 10.0)
             val allowEdgeOverflow = Random.bool(0.25)
             val allowHeavy = Random.bool(0.3)
             val allowChoppy = Random.bool(0.3)
-            val backgroundColor =
-                if (Random.bool(0.9)) ColorHSLa(30.0, 0.2, 0.9).toRGBa() else ColorHSLa(0.0, 0.0, 0.05).toRGBa()
-            val palette =
-                Random.pick(listOf(Palette.seaSide(), Palette.noire(), Palette.winterMountain(), Palette.spring()))
+            val backgroundColor = ColorHSLa(24.0, 0.2, 0.95).toRGBa()
+            val palette = Palette.nesso()
 
             println("seed: $seed")
             println("renderWidth: $renderWidth")
@@ -91,7 +91,7 @@ fun main() = application {
 
                     drawer.fill = run {
                         val region = colorRegion.find { it.first.contains(Vector2(x, y)) }
-                        region?.second ?: Random.pick(palette).toRGBa()
+                        region?.second ?: palette.first().toRGBa()
                     }
 
                     drawer.strokeWeight = lineRadius

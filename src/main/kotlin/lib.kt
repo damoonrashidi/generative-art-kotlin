@@ -72,6 +72,16 @@ class Palette {
             return listOf(ColorHSLa(0.0, 0.0, 0.1))
         }
 
+        fun nesso(): List<ColorHSLa> {
+            return listOf(
+                ColorHSLa(233.0, 0.72, 0.75),
+                ColorHSLa(0.0, 0.8, 0.65),
+                ColorHSLa(0.0, 0.0, 0.31),
+                ColorHSLa(24.0, 0.2, 0.8),
+                ColorHSLa(61.0, 0.74, 0.75)
+            )
+        }
+
         fun winterMountain(): List<ColorHSLa> {
             return listOf(
                 ColorHSLa(0.0, 0.1, 0.1),

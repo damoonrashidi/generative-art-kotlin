@@ -1,16 +1,11 @@
-import org.openrndr.math.Vector2
 import org.openrndr.application
-import org.openrndr.color.ColorHSLa
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.isolatedWithTarget
 import org.openrndr.draw.renderTarget
 import org.openrndr.extra.noise.Random
 import org.openrndr.shape.Circle
 import java.io.File
-import kotlin.io.path.Path
-import kotlin.io.path.listDirectoryEntries
 
-import kotlin.math.*
 import kotlin.system.exitProcess
 
 
@@ -39,17 +34,17 @@ fun main() = application {
 
                 drawer.circle(Circle(50.0, 50.0, 50.0))
 
-                canvas.colorBuffer(0).saveToFile(File(getTemplateFilename()), async = false)
+                val filename = GenerativeArt.getFilename("Template")
+                canvas.colorBuffer(0)
+                    .saveToFile(
+                        File(filename),
+                        async = false
+                    )
+                GenerativeArt.openOutput(filename)
+
                 exitProcess(0)
             }
 
         }
     }
-}
-
-
-fun getTemplateFilename(): String {
-    val path = "./outputs/nightfall"
-    val entries = Path(path).listDirectoryEntries("*.jpg").size
-    return path + "/Nightfall-${entries + 1}.jpg"
 }
