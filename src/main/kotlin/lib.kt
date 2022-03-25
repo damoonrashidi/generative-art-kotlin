@@ -1,7 +1,10 @@
 import org.openrndr.color.ColorHSLa
 import org.openrndr.shape.Circle
 import org.openrndr.shape.Rectangle
-import kotlin.io.path.*
+import java.io.File
+import kotlin.io.path.Path
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.nameWithoutExtension
 
 class GenerativeArt {
     companion object {
@@ -13,6 +16,17 @@ class GenerativeArt {
             }
             val last = entries.map { it.nameWithoutExtension.split("-").last().toInt() }.maxOf { it }
             return path + "/${project.replaceFirstChar { it.uppercaseChar() }}-${last + 1}.jpg"
+        }
+
+        fun writeSVG(project: String, svg: String) {
+
+            val filename = getFilename(project).replace("jpg", "svg")
+            val file = File(filename).createNewFile()
+            if (file) {
+                File(filename).writeText(svg)
+            } else {
+                println("could not create file file")
+            }
         }
 
         fun openOutput(filename: String) {

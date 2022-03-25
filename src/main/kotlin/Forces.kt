@@ -7,7 +7,11 @@ import org.openrndr.extra.noclear.NoClear
 import org.openrndr.extra.noise.Random
 import org.openrndr.math.IntVector2
 import org.openrndr.math.Vector2
-import org.openrndr.shape.*
+import org.openrndr.shape.Circle
+import org.openrndr.shape.Rectangle
+import org.openrndr.shape.Triangle
+import org.openrndr.shape.drawComposition
+import org.openrndr.svg.toSVG
 import java.io.File
 import kotlin.math.cos
 import kotlin.math.sin
@@ -15,8 +19,8 @@ import kotlin.system.exitProcess
 
 fun main() = application {
     configure {
-        width = 64
-        height = 64
+        width = 32
+        height = 32
         hideWindowDecorations = true
         position = IntVector2(0, 0)
     }
@@ -31,17 +35,19 @@ fun main() = application {
             val renderWidth = 4000
             val renderHeight = (4000 * 1.4).toInt()
             val bounds = Rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
-            val quads = CollisionDetection(listOf<Circle>(), bounds, 10)
+            val quads = CollisionDetection(listOf<Circle>(), bounds, 20)
 
             val zoom = Random.int(900, 4_000)
             val distort = Random.double(-4.0, 4.0)
-            val linePadding = 5.0
-            val lineWidths = listOf<Double>(1.0, 2.0, 10.0)
+            val linePadding = 40.0
+            val lineWidths = listOf<Double>(40.0)
             val allowEdgeOverflow = Random.bool(0.25)
             val allowHeavy = Random.bool(0.3)
             val allowChoppy = Random.bool(0.3)
             val backgroundColor = ColorHSLa(24.0, 0.2, 0.95).toRGBa()
-            val palette = Palette.nesso()
+            val palette = Palette.noire()
+            val minLineLength = 50.0
+            val maxLineLength = 200.0
 
             println("seed: $seed")
             println("renderWidth: $renderWidth")
@@ -52,16 +58,13 @@ fun main() = application {
             println("allowEdgeOverflow: $allowEdgeOverflow")
             println("allowChoppy: $allowChoppy")
             println("allowHeavy: $allowHeavy")
-            val colorRegion: List<Pair<Triangle, ColorRGBa>> =
-                generateSequence {
-                    Triangle(
-                        Random.point(bounds),
-                        Random.point(bounds),
-                        Random.point(bounds)
-                    )
-                }.take(20).toList().map {
-                    Pair(it, Random.pick(palette).toRGBa())
-                }
+            val colorRegion: List<Pair<Triangle, ColorRGBa>> = generateSequence {
+                Triangle(
+                    Random.point(bounds), Random.point(bounds), Random.point(bounds)
+                )
+            }.take(20).toList().map {
+                Pair(it, Random.pick(palette).toRGBa())
+            }
             val canvas = renderTarget(renderWidth, renderHeight) { colorBuffer() }
             drawer.isolatedWithTarget(canvas) {
                 ortho(canvas)
@@ -69,69 +72,79 @@ fun main() = application {
                 drawer.fill = backgroundColor
                 drawer.rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
 
-                repeat((renderHeight * 20.0).toInt()) {
-                    val isLong = Random.bool(0.6)
-                    val lineRadius = run {
-                        val heavy = Random.bool(0.05)
-                        if (allowHeavy && heavy) Random.pick(lineWidths) * 5.0 else Random.pick(lineWidths)
-                    }
-                    val stepSize = run {
-                        val choppy = Random.bool(0.05)
-                        if (allowChoppy && choppy) 5.0 else bounds.width / 10000
-                    }
+                val svg = drawComposition {
 
-                    var (x, y) = run {
-                        if (allowEdgeOverflow && isLong) {
-                            Random.point(
-                                bounds.scale(0.95)
-                            )
-                        } else Random.point(bounds.scale(0.8))
-                    }
-                    val linePoints = mutableListOf<Circle>()
+                    repeat((renderHeight * 20.0).toInt()) {
+                        val isLong = Random.bool(0.6)
+                        val lineRadius = run {
+                            val heavy = Random.bool(0.05)
+                            if (allowHeavy && heavy) Random.pick(lineWidths) * 5.0 else Random.pick(lineWidths)
+                        }
+                        val stepSize = run {
+                            val choppy = Random.bool(0.05)
+                            if (allowChoppy && choppy) 5.0 else bounds.width / 10000
+                        }
+                        this.strokeWeight = lineRadius
 
-                    drawer.fill = run {
-                        val region = colorRegion.find { it.first.contains(Vector2(x, y)) }
-                        region?.second ?: palette.first().toRGBa()
-                    }
+                        var (x, y) = run {
+                            if (allowEdgeOverflow && isLong) {
+                                Random.point(
+                                    bounds.scale(0.95)
+                                )
+                            } else Random.point(bounds.scale(0.8))
+                        }
+                        val linePoints = mutableListOf<Circle>()
 
-                    drawer.strokeWeight = lineRadius
-                    drawer.stroke = drawer.fill
-                    val innerBounds = if (allowEdgeOverflow)
-                        bounds.scale(0.9)
-                    else bounds.scale(0.8)
-
-                    while (Vector2(x, y) in innerBounds) {
-                        val n = Random.simplex(x / zoom, y / zoom)
-                        x += sin(n * distort) * lineRadius * stepSize
-                        y += cos(n * distort) * lineRadius * stepSize
-                        val neighbors = quads.getNeighbors(Circle(x, y, lineRadius))
-
-                        if (neighbors.any {
-                                Vector2(x, y).distanceTo(it.center) < it.radius / 2 + lineRadius / 2 + linePadding
-                            }) {
-                            break
+                        drawer.fill = run {
+                            val region = colorRegion.find { it.first.contains(Vector2(x, y)) }
+                            region?.second ?: palette.first().toRGBa()
                         }
 
-                        linePoints.add(Circle(x, y, lineRadius))
-                    }
+                        drawer.strokeWeight = lineRadius
+                        drawer.stroke = drawer.fill
+                        val innerBounds = if (allowEdgeOverflow) bounds.scale(0.9)
+                        else bounds.scale(0.8)
 
-                    if (linePoints.size > 30.0) {
-                        quads.addParticles(linePoints)
-                        drawer.lineStrip(linePoints.map { it.center })
+                        while (Vector2(x, y) in innerBounds && !exceedsMaxLineLength(linePoints, maxLineLength)) {
+                            val n = Random.simplex(x / zoom, y / zoom)
+                            x += sin(n * distort) * lineRadius * stepSize
+                            y += cos(n * distort) * lineRadius * stepSize
+                            val neighbors = quads.getNeighbors(Circle(x, y, lineRadius))
+
+                            if (neighbors.any {
+                                    Vector2(x, y).distanceTo(it.center) < it.radius / 2 + lineRadius / 2 + linePadding
+                                }) {
+                                break
+                            }
+
+                            linePoints.add(Circle(x, y, lineRadius))
+                        }
+
+                        if (getLineLength(linePoints) > minLineLength) {
+                            quads.addParticles(linePoints)
+                            drawer.lineStrip(linePoints.map { it.center })
+                            this.lineStrip(linePoints.map { it.center })
+                        }
                     }
                 }
                 val filename = GenerativeArt.getFilename("Forces")
+                canvas.colorBuffer(0).saveToFile(
+                    File(filename), async = false
+                )
 
-                canvas.colorBuffer(0)
-                    .saveToFile(
-                        File(filename),
-                        async = false
-                    )
-
-                GenerativeArt.openOutput(filename)
+                // GenerativeArt.openOutput(filename)
+                GenerativeArt.writeSVG("Forces", svg.toSVG())
 
                 exitProcess(status = 0)
             }
         }
+
     }
 }
+
+fun getLineLength(points: List<Circle>): Double =
+    points.windowed(2, 2).fold(0.0) { total, (first, second) -> total + first.center.distanceTo(second.center) }
+
+
+fun exceedsMaxLineLength(linePoints: List<Circle>, maxLineLength: Double): Boolean =
+    getLineLength(linePoints) >= maxLineLength
