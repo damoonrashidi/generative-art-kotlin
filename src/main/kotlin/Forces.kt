@@ -11,8 +11,6 @@ import org.openrndr.shape.Circle
 import org.openrndr.shape.Rectangle
 import org.openrndr.shape.Triangle
 import org.openrndr.shape.drawComposition
-import org.openrndr.svg.toSVG
-import java.io.File
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.system.exitProcess
@@ -29,25 +27,24 @@ fun main() = application {
         extend(NoClear())
         extend {
             drawer.stroke = null
-            Random.resetState()
             val seed = System.currentTimeMillis().toString()
             Random.seed = seed
-            val renderWidth = 4000
-            val renderHeight = (4000 * 1.4).toInt()
+            val renderWidth = 2_000
+            val renderHeight = (2_000 * 1.4).toInt()
             val bounds = Rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
-            val quads = CollisionDetection(listOf<Circle>(), bounds, 20)
+            val quads = CollisionDetection<Circle>(listOf(), bounds, 15)
 
-            val zoom = Random.int(900, 4_000)
-            val distort = Random.double(-4.0, 4.0)
-            val linePadding = 40.0
-            val lineWidths = listOf<Double>(40.0)
+            val zoom = Random.int(900, 2_000)
+            val distort = Random.double(4.0, 5.2)
+            val linePadding = 30.0
+            val lineWidths: List<Double> = listOf(25.0, 30.0)
             val allowEdgeOverflow = Random.bool(0.25)
-            val allowHeavy = Random.bool(0.3)
-            val allowChoppy = Random.bool(0.3)
-            val backgroundColor = ColorHSLa(24.0, 0.2, 0.95).toRGBa()
-            val palette = Palette.noire()
-            val minLineLength = 50.0
-            val maxLineLength = 200.0
+            val allowHeavy = Random.bool(0.6)
+            val allowChoppy = Random.bool(0.7)
+            val backgroundColor = ColorHSLa(24.0, 0.2, 0.05).toRGBa()
+            val palette = Palette.random()
+            val minLineLength = 10.0
+            val maxLineLength = renderHeight.toDouble()
 
             println("seed: $seed")
             println("renderWidth: $renderWidth")
@@ -59,10 +56,8 @@ fun main() = application {
             println("allowChoppy: $allowChoppy")
             println("allowHeavy: $allowHeavy")
             val colorRegion: List<Pair<Triangle, ColorRGBa>> = generateSequence {
-                Triangle(
-                    Random.point(bounds), Random.point(bounds), Random.point(bounds)
-                )
-            }.take(20).toList().map {
+                Triangle(Random.point(bounds), Random.point(bounds), Random.point(bounds))
+            }.take(10).toList().map {
                 Pair(it, Random.pick(palette).toRGBa())
             }
             val canvas = renderTarget(renderWidth, renderHeight) { colorBuffer() }
@@ -74,23 +69,22 @@ fun main() = application {
 
                 val svg = drawComposition {
 
-                    repeat((renderHeight * 20.0).toInt()) {
+                    repeat(renderHeight) {
                         val isLong = Random.bool(0.6)
                         val lineRadius = run {
                             val heavy = Random.bool(0.05)
-                            if (allowHeavy && heavy) Random.pick(lineWidths) * 5.0 else Random.pick(lineWidths)
+                            if (allowHeavy && heavy) Random.pick(lineWidths) * 2.0 else Random.pick(lineWidths)
                         }
+
                         val stepSize = run {
-                            val choppy = Random.bool(0.05)
+                            val choppy = Random.bool(0.1)
                             if (allowChoppy && choppy) 5.0 else bounds.width / 10000
                         }
                         this.strokeWeight = lineRadius
 
                         var (x, y) = run {
                             if (allowEdgeOverflow && isLong) {
-                                Random.point(
-                                    bounds.scale(0.95)
-                                )
+                                Random.point(bounds.scale(0.95))
                             } else Random.point(bounds.scale(0.8))
                         }
                         val linePoints = mutableListOf<Circle>()
@@ -102,7 +96,7 @@ fun main() = application {
 
                         drawer.strokeWeight = lineRadius
                         drawer.stroke = drawer.fill
-                        val innerBounds = if (allowEdgeOverflow) bounds.scale(0.9)
+                        val innerBounds = if (allowEdgeOverflow) bounds.scale(1.1)
                         else bounds.scale(0.8)
 
                         while (Vector2(x, y) in innerBounds && !exceedsMaxLineLength(linePoints, maxLineLength)) {
@@ -123,17 +117,16 @@ fun main() = application {
                         if (getLineLength(linePoints) > minLineLength) {
                             quads.addParticles(linePoints)
                             drawer.lineStrip(linePoints.map { it.center })
-                            this.lineStrip(linePoints.map { it.center })
+                            this.lineStrip(linePoints.map { it.center }, insert = true)
                         }
                     }
                 }
-                val filename = GenerativeArt.getFilename("Forces")
-                canvas.colorBuffer(0).saveToFile(
-                    File(filename), async = false
-                )
 
-                // GenerativeArt.openOutput(filename)
-                GenerativeArt.writeSVG("Forces", svg.toSVG())
+                GenerativeArt.saveOutput("Forces",
+                    canvas,
+                    svg,
+                    Vector2(renderWidth.toDouble(), renderHeight.toDouble())
+                )
 
                 exitProcess(status = 0)
             }
@@ -145,6 +138,5 @@ fun main() = application {
 fun getLineLength(points: List<Circle>): Double =
     points.windowed(2, 2).fold(0.0) { total, (first, second) -> total + first.center.distanceTo(second.center) }
 
-
-fun exceedsMaxLineLength(linePoints: List<Circle>, maxLineLength: Double): Boolean =
-    getLineLength(linePoints) >= maxLineLength
+fun exceedsMaxLineLength(linePoints: List<Circle>, maxLineLength: Double?): Boolean =
+    if (maxLineLength == null) false else getLineLength(linePoints) >= maxLineLength

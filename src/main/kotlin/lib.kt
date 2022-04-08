@@ -1,6 +1,11 @@
 import org.openrndr.color.ColorHSLa
+import org.openrndr.draw.RenderTarget
+import org.openrndr.extra.noise.Random
+import org.openrndr.math.Vector2
 import org.openrndr.shape.Circle
+import org.openrndr.shape.Composition
 import org.openrndr.shape.Rectangle
+import org.openrndr.svg.saveToFile
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.io.path.listDirectoryEntries
@@ -8,61 +13,82 @@ import kotlin.io.path.nameWithoutExtension
 
 class GenerativeArt {
     companion object {
-        fun getFilename(project: String): String {
-            val path = "./outputs/$project"
-            val entries = Path(path).listDirectoryEntries("*.jpg")
+        fun getFilename(projectName: String): String {
+            val path = "./outputs/$projectName"
+            val entries = Path("$path/jpg").listDirectoryEntries("*.jpg")
             if (entries.isEmpty()) {
-                return "/${project.replaceFirstChar { it.uppercaseChar() }}-1.jpg"
+                return "/${projectName.replaceFirstChar { it.uppercaseChar() }}-1"
             }
             val last = entries.map { it.nameWithoutExtension.split("-").last().toInt() }.maxOf { it }
-            return path + "/${project.replaceFirstChar { it.uppercaseChar() }}-${last + 1}.jpg"
-        }
-
-        fun writeSVG(project: String, svg: String) {
-
-            val filename = getFilename(project).replace("jpg", "svg")
-            val file = File(filename).createNewFile()
-            if (file) {
-                File(filename).writeText(svg)
-            } else {
-                println("could not create file file")
-            }
+            return "${projectName.replaceFirstChar { it.uppercaseChar() }}-${last + 1}"
         }
 
         fun openOutput(filename: String) {
             Runtime.getRuntime().exec("open $filename")
         }
+
+        fun saveOutput(
+            projectName: String,
+            renderTarget: RenderTarget,
+            svg: Composition,
+            size: Vector2,
+        ) {
+            val path = "./outputs/$projectName"
+            val filename = getFilename(projectName)
+            renderTarget.colorBuffer(0).saveToFile(File("$path/jpg/$filename.jpg"), async = false)
+
+            svg.root.attributes["width"] = size.x.toString()
+            svg.root.attributes["height"] = size.y.toString()
+
+            val svgName = "$path/svg/$filename.svg"
+            val file = File(svgName)
+            svg.saveToFile(file)
+        }
     }
 }
 
-typealias QuadMap = List<List<MutableList<Circle>>>
+typealias QuadMap<T> = List<List<MutableList<T>>>
 
-class CollisionDetection(
-    particles: List<Circle>,
+class CollisionDetection<T>(
+    particles: List<T>,
     private val bounds: Rectangle,
-    private val cellCount: Int = 10
+    private val cellCount: Int = 10,
 ) {
-    private val map: QuadMap = List(cellCount) { List(cellCount) { mutableListOf<Circle>() } }
+    private val map: QuadMap<T> = List(cellCount) { List(cellCount) { mutableListOf() } }
 
-    private fun getQuadIndex(particle: Circle): Pair<Int, Int> {
-        val x = (particle.center.x / bounds.width * cellCount).toInt().coerceIn(map.indices)
-        val y = (particle.center.y / bounds.height * cellCount).toInt().coerceIn(map.indices)
-
-        return Pair(x, y)
+    private fun getQuadIndex(particle: T): Pair<Int, Int> {
+        when (particle) {
+            is Circle -> {
+                val x = (particle.center.x / bounds.width * cellCount).toInt().coerceIn(map.indices)
+                val y = (particle.center.y / bounds.height * cellCount).toInt().coerceIn(map.indices)
+                return Pair(x, y)
+            }
+            is Rectangle -> {
+                val x = (particle.center.x / bounds.width * cellCount).toInt().coerceIn(map.indices)
+                val y = (particle.center.y / bounds.height * cellCount).toInt().coerceIn(map.indices)
+                return Pair(x, y)
+            }
+            is Vector2 -> {
+                val x = (particle.x / bounds.width * cellCount).toInt().coerceIn(map.indices)
+                val y = (particle.y / bounds.height * cellCount).toInt().coerceIn(map.indices)
+                return Pair(x, y)
+            }
+            else -> throw Error("doesn't work")
+        }
     }
 
     init {
         this.addParticles(particles)
     }
 
-    fun addParticles(additionalParticles: List<Circle>) {
+    fun addParticles(additionalParticles: List<T>) {
         for (particle in additionalParticles) {
             val (x, y) = this.getQuadIndex(particle)
             map[y][x].add(particle)
         }
     }
 
-    fun getNeighbors(particle: Circle): List<Circle> {
+    fun getNeighbors(particle: T): List<T> {
         val (x, y) = this.getQuadIndex(particle)
         return map[y][x]
     }
@@ -70,6 +96,7 @@ class CollisionDetection(
 
 class Palette {
     companion object {
+        @JvmStatic
         fun spring(): List<ColorHSLa> {
             return listOf(
                 ColorHSLa(
@@ -82,10 +109,12 @@ class Palette {
             )
         }
 
+        @JvmStatic
         fun noire(): List<ColorHSLa> {
             return listOf(ColorHSLa(0.0, 0.0, 0.1))
         }
 
+        @JvmStatic
         fun nesso(): List<ColorHSLa> {
             return listOf(
                 ColorHSLa(233.0, 0.72, 0.75),
@@ -96,6 +125,7 @@ class Palette {
             )
         }
 
+        @JvmStatic
         fun winterMountain(): List<ColorHSLa> {
             return listOf(
                 ColorHSLa(0.0, 0.1, 0.1),
@@ -107,6 +137,7 @@ class Palette {
             )
         }
 
+        @JvmStatic
         fun seaSide(): List<ColorHSLa> {
             return listOf(
                 ColorHSLa(40.0, 0.52, 0.88),
@@ -114,6 +145,11 @@ class Palette {
                 ColorHSLa(0.0, 0.2, 0.38),
                 ColorHSLa(214.0, 0.29, 0.41),
             )
+        }
+
+        @JvmStatic
+        fun random(): List<ColorHSLa> {
+            return Random.pick(listOf(seaSide(), winterMountain(), nesso(), noire(), spring()))
         }
     }
 }
