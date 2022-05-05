@@ -148,8 +148,19 @@ class Palette {
         }
 
         @JvmStatic
+        fun pastel(): List<ColorHSLa> {
+            return listOf(
+                ColorHSLa(36.0, 0.64, 0.85),
+                ColorHSLa(219.0, 0.18, 0.39),
+                ColorHSLa(160.0, 0.11, 0.52),
+                ColorHSLa(120.0, 0.22, 0.65),
+
+                )
+        }
+
+        @JvmStatic
         fun random(): List<ColorHSLa> {
-            return Random.pick(listOf(seaSide(), winterMountain(), nesso(), noire(), spring()))
+            return Random.pick(listOf(seaSide(), winterMountain(), nesso(), spring(), noire(), pastel()))
         }
     }
 }

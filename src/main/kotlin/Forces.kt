@@ -29,32 +29,34 @@ fun main() = application {
             drawer.stroke = null
             val seed = System.currentTimeMillis().toString()
             Random.seed = seed
-            val renderWidth = 2_000
-            val renderHeight = (2_000 * 1.4).toInt()
+            val renderWidth = 8000
+            val renderHeight = (8000 * 1.4).toInt()
             val bounds = Rectangle(0.0, 0.0, renderWidth.toDouble(), renderHeight.toDouble())
             val quads = CollisionDetection<Circle>(listOf(), bounds, 15)
 
-            val zoom = Random.int(900, 2_000)
-            val distort = Random.double(4.0, 5.2)
-            val linePadding = 30.0
-            val lineWidths: List<Double> = listOf(25.0, 30.0)
+            val zoom = Random.int(1_800, 3_200)
+            val distort = Random.double(1.5, 4.2)
+            val linePadding = 50.0
+            val lineWidths: List<Double> = listOf(40.0, 50.0, 60.0)
             val allowEdgeOverflow = Random.bool(0.25)
-            val allowHeavy = Random.bool(0.6)
-            val allowChoppy = Random.bool(0.7)
-            val backgroundColor = ColorHSLa(24.0, 0.2, 0.05).toRGBa()
+            val allowHeavy = Random.bool(0.8)
+            val allowChoppy = Random.bool(0.8)
+            val backgroundColor = ColorHSLa(35.0, 0.13, 0.92).toRGBa()
             val palette = Palette.random()
-            val minLineLength = 10.0
-            val maxLineLength = renderHeight.toDouble()
+            val minLineLength = 50.0
+            val maxLineLength = renderHeight / 2.0
+            val density = 3000
 
             println("seed: $seed")
             println("renderWidth: $renderWidth")
             println("renderHeight: $renderHeight")
             println("zoom: $zoom")
             println("distort: $distort")
-            println("palette: $palette")
             println("allowEdgeOverflow: $allowEdgeOverflow")
             println("allowChoppy: $allowChoppy")
             println("allowHeavy: $allowHeavy")
+            println("palette: $palette")
+            println("density: $density")
             val colorRegion: List<Pair<Triangle, ColorRGBa>> = generateSequence {
                 Triangle(Random.point(bounds), Random.point(bounds), Random.point(bounds))
             }.take(10).toList().map {
@@ -69,16 +71,16 @@ fun main() = application {
 
                 val svg = drawComposition {
 
-                    repeat(renderHeight) {
-                        val isLong = Random.bool(0.6)
+                    repeat(density) {
+                        val isLong = Random.bool(0.005)
                         val lineRadius = run {
-                            val heavy = Random.bool(0.05)
-                            if (allowHeavy && heavy) Random.pick(lineWidths) * 2.0 else Random.pick(lineWidths)
+                            val heavy = Random.bool(0.1)
+                            if (allowHeavy && heavy) Random.pick(lineWidths) * 4 else Random.pick(lineWidths)
                         }
 
                         val stepSize = run {
                             val choppy = Random.bool(0.1)
-                            if (allowChoppy && choppy) 5.0 else bounds.width / 10000
+                            if (allowChoppy && choppy) bounds.width / 5000 else bounds.width / 10000
                         }
                         this.strokeWeight = lineRadius
 
@@ -96,13 +98,17 @@ fun main() = application {
 
                         drawer.strokeWeight = lineRadius
                         drawer.stroke = drawer.fill
-                        val innerBounds = if (allowEdgeOverflow) bounds.scale(1.1)
+
+                        this.stroke = drawer.fill
+                        this.strokeWeight = lineRadius
+
+                        val innerBounds = if (allowEdgeOverflow && isLong) bounds.scale(0.95)
                         else bounds.scale(0.8)
 
                         while (Vector2(x, y) in innerBounds && !exceedsMaxLineLength(linePoints, maxLineLength)) {
                             val n = Random.simplex(x / zoom, y / zoom)
-                            x += sin(n * distort) * lineRadius * stepSize
-                            y += cos(n * distort) * lineRadius * stepSize
+                            x += cos(n * distort) * lineRadius * stepSize
+                            y += sin(n * distort) * lineRadius * stepSize
                             val neighbors = quads.getNeighbors(Circle(x, y, lineRadius))
 
                             if (neighbors.any {
@@ -125,8 +131,7 @@ fun main() = application {
                 GenerativeArt.saveOutput("Forces",
                     canvas,
                     svg,
-                    Vector2(renderWidth.toDouble(), renderHeight.toDouble())
-                )
+                    Vector2(renderWidth.toDouble(), renderHeight.toDouble()))
 
                 exitProcess(status = 0)
             }
